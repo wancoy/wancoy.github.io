@@ -1,353 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Drive Player Generator</title>
-    <!-- Fluid Player CSS -->
-    <link rel="stylesheet" href="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.css">
-    <!-- Plyr.io CSS -->
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f7fa;
-        }
-        .container {
-            background: white;
-            border-radius: 8px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #4285F4;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .input-group {
-            margin-bottom: 20px;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
-        button {
-            background-color: #4285F4;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background 0.3s;
-            margin-right: 10px;
-        }
-        button:hover {
-            background-color: #3367D6;
-        }
-        .player-options {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .player-option {
-            padding: 8px 15px;
-            background: #e0e0e0;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .player-option.active {
-            background: #4285F4;
-            color: white;
-        }
-        .player-container {
-            margin: 25px 0;
-            position: relative;
-        }
-        #embed-code {
-            width: 100%;
-            height: 100px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-family: monospace;
-            margin-bottom: 15px;
-        }
-        .hidden {
-            display: none;
-        }
-        .video-container {
-            position: relative;
-            padding-bottom: 56.25%; /* 16:9 aspect ratio */
-            height: 0;
-            overflow: hidden;
-            margin-bottom: 20px;
-        }
-        .video-container video {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Google Drive Video Embed Generator (Plyr)</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    pre {
+      background: #222;
+      color: #0f0;
+      padding: 10px;
+      overflow-x: auto;
+    }
+    video {
+      max-width: 100%;
+      margin-top: 20px;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
 </head>
 <body>
-    <div class="container">
-        <h1>Google Drive Player Generator</h1>
-        
-        <div class="input-group">
-            <input type="text" id="driveLink" placeholder="Paste Google Drive link (e.g., https://drive.google.com/file/d/FILE_ID/view)" />
-        </div>
-        
-        <div class="player-options">
-            <div class="player-option active" data-player="fluid">Fluid Player</div>
-            <div class="player-option" data-player="plyr">Plyr.io</div>
-        </div>
-        
-        <button onclick="generatePlayer()">Generate Player</button>
-        <button onclick="generateEmbedCode()">Generate Embed Code</button>
-        
-        <div class="player-container">
-            <div class="video-container">
-                <div id="fluidPlayerContainer"></div>
-                <div id="plyrContainer" class="hidden"></div>
-            </div>
-        </div>
-        
-        <div id="embed-section" class="hidden">
-            <h3>Embed Code:</h3>
-            <textarea id="embed-code" readonly></textarea>
-            <button onclick="copyEmbedCode()">Copy Embed Code</button>
-        </div>
-    </div>
 
-    <!-- Fluid Player JS -->
-    <script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script>
-    <!-- Plyr.io JS -->
-    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
-    
-    <script>
-        let currentPlayer = 'fluid';
-        let currentFileId = '';
-        
-        // Switch between players
-        document.querySelectorAll('.player-option').forEach(option => {
-            option.addEventListener('click', function() {
-                document.querySelectorAll('.player-option').forEach(el => el.classList.remove('active'));
-                this.classList.add('active');
-                currentPlayer = this.dataset.player;
-                
-                document.getElementById('fluidPlayerContainer').classList.add('hidden');
-                document.getElementById('plyrContainer').classList.add('hidden');
-                
-                if (currentPlayer === 'fluid') {
-                    document.getElementById('fluidPlayerContainer').classList.remove('hidden');
-                } else {
-                    document.getElementById('plyrContainer').classList.remove('hidden');
-                }
-                
-                // Regenerate embed code if already generated
-                if (currentFileId) {
-                    generateEmbedCode();
-                }
-            });
-        });
-        
-        function extractFileId(driveLink) {
-            // Try different Google Drive URL patterns
-            const patterns = [
-                /\/file\/d\/([a-zA-Z0-9_-]+)/,
-                /id=([a-zA-Z0-9_-]+)/,
-                /uc\?export=download&id=([a-zA-Z0-9_-]+)/
-            ];
-            
-            for (const pattern of patterns) {
-                const match = driveLink.match(pattern);
-                if (match && match[1]) {
-                    return match[1];
-                }
-            }
-            
-            // If no match, check if it's just an ID
-            if (driveLink.match(/^[a-zA-Z0-9_-]{20,}$/)) {
-                return driveLink;
-            }
-            
-            return null;
-        }
-        
-        function generatePlayer() {
-            const driveLink = document.getElementById('driveLink').value.trim();
-            
-            if (!driveLink) {
-                alert('Please enter a Google Drive link!');
-                return;
-            }
-            
-            const fileId = extractFileId(driveLink);
-            
-            if (!fileId) {
-                alert('Invalid Google Drive link format!\n\nCorrect formats:\nhttps://drive.google.com/file/d/FILE_ID/view\nOr just the FILE_ID');
-                return;
-            }
-            
-            currentFileId = fileId;
-            const streamUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-            
-            // Clear previous players
-            document.getElementById('fluidPlayerContainer').innerHTML = '';
-            document.getElementById('plyrContainer').innerHTML = '';
-            
-            // Generate Fluid Player
-            const fluidHTML = `<video id="fluid-video">
-                <source src="${streamUrl}" type="video/mp4">
-            </video>`;
-            document.getElementById('fluidPlayerContainer').innerHTML = fluidHTML;
-            
-            // Generate Plyr Player
-            const plyrHTML = `<video id="plyr-video" playsinline controls>
-                <source src="${streamUrl}" type="video/mp4">
-            </video>`;
-            document.getElementById('plyrContainer').innerHTML = plyrHTML;
-            
-            // Initialize players
-            if (currentPlayer === 'fluid') {
-                fluidPlayer('fluid-video', {
-                    layoutControls: {
-                        primaryColor: "#4285F4",
-                        fillToContainer: true,
-                        autoPlay: false,
-                        mute: false,
-                        allowTheatre: true,
-                        playbackRateEnabled: true,
-                        allowDownload: true,
-                        controls: {
-                            autoHide: true,
-                            autoHideTimeout: 3,
-                            animated: true,
-                        }
-                    }
-                });
-                document.getElementById('fluidPlayerContainer').classList.remove('hidden');
-            } else {
-                const player = new Plyr('#plyr-video', {
-                    controls: [
-                        'play-large',
-                        'play',
-                        'progress',
-                        'current-time',
-                        'mute',
-                        'volume',
-                        'settings',
-                        'pip',
-                        'airplay',
-                        'fullscreen'
-                    ],
-                    settings: ['quality', 'speed'],
-                    hideControls: false
-                });
-                document.getElementById('plyrContainer').classList.remove('hidden');
-            }
-            
-            // Hide embed section until requested
-            document.getElementById('embed-section').classList.add('hidden');
-        }
-        
-        function generateEmbedCode() {
-            if (!currentFileId) {
-                alert('Please generate a player first!');
-                return;
-            }
-            
-            const streamUrl = `https://drive.google.com/uc?export=download&id=${currentFileId}`;
-            let embedCode = '';
-            
-            if (currentPlayer === 'fluid') {
-                embedCode = `<!-- Fluid Player Embed -->
-<link rel="stylesheet" href="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.css">
-<script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script>
+  <h2>Google Drive Video Embed Generator with Plyr</h2>
+  <input type="text" id="driveLink" placeholder="Paste Google Drive file link here">
+  <button onclick="generateEmbed()">Generate & Play</button>
 
-<div style="width: 100%; max-width: 800px; margin: 0 auto;">
-    <video id="embedded-fluid-player">
-        <source src="${streamUrl}" type="video/mp4">
-    </video>
-</div>
+  <div id="videoContainer"></div>
+  <h3>Embed Code:</h3>
+  <pre id="output"></pre>
 
-<script>
-    fluidPlayer('embedded-fluid-player', {
-        layoutControls: {
-            primaryColor: "#4285F4",
-            fillToContainer: true,
-            autoPlay: false,
-            mute: false,
-            allowTheatre: true,
-            playbackRateEnabled: true,
-            controls: {
-                autoHide: true,
-                autoHideTimeout: 3,
-                animated: true
-            }
-        }
-    });
-</script>`;
-            } else {
-                embedCode = `<!-- Plyr.io Player Embed -->
-<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
+  <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+  <script>
+    function extractDriveID(url) {
+      const match = url.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+      return match ? match[1] : null;
+    }
+
+    function generateEmbed() {
+      const input = document.getElementById("driveLink").value.trim();
+      const id = extractDriveID(input);
+      const output = document.getElementById("output");
+      const container = document.getElementById("videoContainer");
+
+      if (!id) {
+        output.textContent = "❌ Invalid Google Drive link.";
+        container.innerHTML = '';
+        return;
+      }
+
+      const videoSrc = `https://drive.google.com/uc?export=download&id=${id}`;
+
+      const embedCode = `
+<video id="player" controls crossorigin playsinline>
+  <source src="${videoSrc}" type="video/mp4" />
+</video>
+<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
 <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+<script>new Plyr('#player');</script>`;
 
-<div style="width: 100%; max-width: 800px; margin: 0 auto;">
-    <video id="embedded-plyr-player" playsinline controls>
-        <source src="${streamUrl}" type="video/mp4">
-    </video>
-</div>
+      output.textContent = embedCode.trim();
 
-<script>
-    const player = new Plyr('#embedded-plyr-player', {
-        controls: [
-            'play-large',
-            'play',
-            'progress',
-            'current-time',
-            'mute',
-            'volume',
-            'settings',
-            'pip',
-            'airplay',
-            'fullscreen'
-        ],
-        settings: ['quality', 'speed']
-    });
-</script>`;
-            }
-            
-            document.getElementById('embed-code').value = embedCode;
-            document.getElementById('embed-section').classList.remove('hidden');
-        }
-        
-        function copyEmbedCode() {
-            const embedCode = document.getElementById('embed-code');
-            embedCode.select();
-            document.execCommand('copy');
-            alert('Embed code copied to clipboard!');
-        }
-        
-        // Auto-load if URL has ID parameter
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('id')) {
-                const fileId = urlParams.get('id');
-                document.getElementById('driveLink').value = `https://drive.google.com/file/d/${fileId}/view`;
-                generatePlayer();
-            }
-        };
-    </script>
+      container.innerHTML = `
+        <video id="player" controls crossorigin playsinline>
+          <source src="${videoSrc}" type="video/mp4" />
+        </video>
+      `;
+      new Plyr('#player');
+    }
+  </script>
+
 </body>
 </html>
