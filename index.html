@@ -2,23 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Google Drive Video Embed Generator (Plyr)</title>
+  <title>Google Drive Embed Generator</title>
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
-      background: #f4f4f4;
+      background: #f0f0f0;
     }
     input, button {
       padding: 10px;
       font-size: 16px;
-      margin: 5px 0;
       width: 100%;
-      box-sizing: border-box;
+      margin-bottom: 10px;
     }
     pre {
-      background: #222;
-      color: #0f0;
+      background: #1e1e1e;
+      color: #00ff00;
       padding: 10px;
       overflow-x: auto;
     }
@@ -27,7 +27,6 @@
       margin-top: 20px;
     }
   </style>
-  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
 </head>
 <body>
 
@@ -35,15 +34,20 @@
   <input type="text" id="driveLink" placeholder="Paste Google Drive file link here">
   <button onclick="generateEmbed()">Generate & Play</button>
 
-  <div id="videoContainer"></div>
   <h3>Embed Code:</h3>
   <pre id="output"></pre>
+
+  <div id="videoContainer"></div>
 
   <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
   <script>
     function extractDriveID(url) {
       const match = url.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
       return match ? match[1] : null;
+    }
+
+    function escapeHtml(html) {
+      return html.replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
     function generateEmbed() {
@@ -65,11 +69,12 @@
   <source src="${videoSrc}" type="video/mp4" />
 </video>
 <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-<script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
-<script>new Plyr('#player');</script>`;
+<script src="https://cdn.plyr.io/3.7.8/plyr.js">&lt;/script&gt;
+<script>
+  new Plyr('#player');
+&lt;/script&gt;`.trim();
 
-      output.textContent = embedCode.trim();
-
+      output.innerHTML = escapeHtml(embedCode);
       container.innerHTML = `
         <video id="player" controls crossorigin playsinline>
           <source src="${videoSrc}" type="video/mp4" />
